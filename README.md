@@ -11,7 +11,7 @@ Monorepo for a React/Vite frontend and a clean FastAPI backend deployed on Rende
 ## Local development
 Backend:
 1. `cd backend`
-2. Create a Python 3.11.9 virtual environment.
+2. Create a Python 3.14 virtual environment.
 3. `pip install -r requirements.txt`
 4. Copy `backend/.env.example` to `backend/.env` and set `DATABASE_URL`
 5. `alembic upgrade head`
@@ -25,9 +25,9 @@ Frontend:
 ## Deployment
 Render backend:
 - Root Directory: `backend`
-- Build Command: `pip install -r requirements.txt`
+- Build Command: `pip install --upgrade pip setuptools wheel && pip install -r requirements.txt`
 - Start Command: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
-- Runtime: `python-3.11.9`
+- Runtime: `python-3.14.0`
 
 Vercel frontend:
 - Root Directory: `frontend`
