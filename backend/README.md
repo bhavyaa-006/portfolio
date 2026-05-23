@@ -21,7 +21,7 @@ Clean FastAPI backend for the portfolio monorepo.
 ## Render deployment
 - Root Directory: `backend`
 - Build Command: `pip install --upgrade pip setuptools wheel && pip install -r requirements.txt`
-- Start Command: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
+- Start Command: `python -m uvicorn app.main:app --host 0.0.0.0 --port $PORT`
 - Runtime: `python-3.14.0`
 
 ## API contract with the frontend

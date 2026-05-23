@@ -22,6 +22,7 @@ from app.services.auth_service import bootstrap_admin_user
 BASE_DIR = Path(__file__).resolve().parents[1]
 UPLOAD_DIR = BASE_DIR / "uploads"
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+logger = logging.getLogger(__name__)
 
 
 def run_migrations() -> None:
@@ -40,12 +41,14 @@ async def lifespan(_: FastAPI):
         level=settings.LOG_LEVEL,
         format="%(asctime)s %(levelname)s [%(name)s] %(message)s",
     )
+    logger.info("Starting %s on %s", settings.PROJECT_NAME, settings.API_V1_STR)
 
     if settings.RUN_MIGRATIONS:
         last_error: Exception | None = None
         for attempt in range(5):
             try:
                 run_migrations()
+                logger.info("Database migrations completed")
                 last_error = None
                 break
             except Exception as exc:  # pragma: no cover - startup retry path
