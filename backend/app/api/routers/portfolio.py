@@ -1,11 +1,18 @@
+import logging
+import shutil
+from pathlib import Path
 from typing import Any, List
-from fastapi import APIRouter, Depends, HTTPException
+
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from sqlalchemy.orm import Session
 
 from app import crud, models, schemas
 from app.api import deps
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
+UPLOAD_DIR = Path("uploads")
+UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 @router.get("/settings", response_model=schemas.PortfolioSettings)
 def read_portfolio_settings(
@@ -87,6 +94,8 @@ def create_skill(*, db: Session = Depends(deps.get_db), item_in: schemas.SkillCr
 @router.put("/skills/{id}", response_model=schemas.Skill)
 def update_skill(*, db: Session = Depends(deps.get_db), id: int, item_in: schemas.SkillUpdate, current_user: models.User = Depends(deps.get_current_user)) -> Any:
     item = crud.skill.get(db, id=id)
+    if not item:
+        raise HTTPException(status_code=404, detail="Skill not found")
     return crud.skill.update(db, db_obj=item, obj_in=item_in)
 
 @router.delete("/skills/{id}", response_model=schemas.Skill)
@@ -105,6 +114,8 @@ def create_experience(*, db: Session = Depends(deps.get_db), item_in: schemas.Ex
 @router.put("/experience/{id}", response_model=schemas.Experience)
 def update_experience(*, db: Session = Depends(deps.get_db), id: int, item_in: schemas.ExperienceUpdate, current_user: models.User = Depends(deps.get_current_user)) -> Any:
     item = crud.experience.get(db, id=id)
+    if not item:
+        raise HTTPException(status_code=404, detail="Experience not found")
     return crud.experience.update(db, db_obj=item, obj_in=item_in)
 
 @router.delete("/experience/{id}", response_model=schemas.Experience)
@@ -123,6 +134,8 @@ def create_education(*, db: Session = Depends(deps.get_db), item_in: schemas.Edu
 @router.put("/education/{id}", response_model=schemas.Education)
 def update_education(*, db: Session = Depends(deps.get_db), id: int, item_in: schemas.EducationUpdate, current_user: models.User = Depends(deps.get_current_user)) -> Any:
     item = crud.education.get(db, id=id)
+    if not item:
+        raise HTTPException(status_code=404, detail="Education not found")
     return crud.education.update(db, db_obj=item, obj_in=item_in)
 
 @router.delete("/education/{id}", response_model=schemas.Education)
@@ -139,18 +152,20 @@ def create_contact_message(*, db: Session = Depends(deps.get_db), item_in: schem
     return crud.contact_message.create(db, obj_in=item_in)
 
 # --- File Uploads ---
-from fastapi import UploadFile, File
-import shutil
-import os
-from pathlib import Path
-
 UPLOAD_DIR = Path("uploads")
-UPLOAD_DIR.mkdir(exist_ok=True)
+UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+
 
 @router.post("/upload")
 async def upload_file(file: UploadFile = File(...), current_user: models.User = Depends(deps.get_current_user)):
-    file_path = UPLOAD_DIR / file.filename
-    with file_path.open("wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
-    return {"url": f"/uploads/{file.filename}"}
+    safe_name = Path(file.filename).name
+    file_path = UPLOAD_DIR / safe_name
+    logger.info("Uploading file to %s", file_path)
+    try:
+        with file_path.open("wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+    except Exception as exc:
+        logger.exception("Upload failed for %s", safe_name)
+        raise HTTPException(status_code=500, detail="Failed to upload file") from exc
+    return {"url": f"/uploads/{safe_name}"}
 

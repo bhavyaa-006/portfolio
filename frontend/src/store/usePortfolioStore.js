@@ -29,7 +29,11 @@ const usePortfolioStore = create((set) => ({
         loading: false,
       });
     } catch (err) {
-      set({ error: err.message, loading: false });
+      console.error('Failed to fetch public portfolio data', err);
+      set({
+        error: err?.response?.data?.detail || err?.message || 'Unable to load portfolio data',
+        loading: false,
+      });
     }
   },
 }));
