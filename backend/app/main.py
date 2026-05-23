@@ -17,7 +17,7 @@ from app.db.session import engine
 # Base.metadata.create_all(bind=engine)
 
 logger = logging.getLogger(__name__)
-UPLOAD_DIR = Path("uploads")
+UPLOAD_DIR = Path(__file__).resolve().parents[1] / "uploads"
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 

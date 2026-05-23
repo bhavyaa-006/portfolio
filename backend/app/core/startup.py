@@ -15,7 +15,7 @@ def main() -> None:
         sys.executable,
         "-m",
         "uvicorn",
-        "app.main:app",
+        "main:app",
         "--host",
         "0.0.0.0",
         "--port",

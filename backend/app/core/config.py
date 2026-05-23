@@ -11,14 +11,18 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7  # 7 days
 
     # Database
-    DATABASE_URL: str = Field(default="postgresql://postgres:bhavya@postgres:5432/portfolio")
+    DATABASE_URL: str = Field(default="sqlite:///./portfolio.db")
     DB_POOL_SIZE: int = Field(default=5)
     DB_MAX_OVERFLOW: int = Field(default=10)
     DB_POOL_RECYCLE: int = Field(default=300)
 
     # CORS
     BACKEND_CORS_ORIGINS: list[str] = Field(
-        default_factory=lambda: ["http://localhost:5173", "http://127.0.0.1:5173"]
+        default_factory=lambda: [
+            "http://localhost:5173",
+            "http://127.0.0.1:5173",
+            "http://localhost:4173",
+        ]
     )
     BACKEND_CORS_ORIGIN_REGEX: str = Field(default=r"^https://.*\.vercel\.app$")
 
@@ -46,6 +50,8 @@ class Settings(BaseSettings):
                 (parsed.scheme, parsed.netloc, parsed.path, urlencode(query), parsed.fragment)
             )
 
+        if normalized.startswith("sqlite:///") or normalized.startswith("sqlite+pysqlite:///"):
+            return normalized
         if normalized.startswith("postgresql+psycopg2://"):
             return normalized
         if normalized.startswith("postgresql://"):

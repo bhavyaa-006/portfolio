@@ -1,18 +1,19 @@
 services:
   - type: web
     name: portfolio-backend
-    runtime: docker
+    runtime: python
     rootDir: backend
-    autoDeploy: true
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /health
-    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    autoDeploy: true
     envVars:
       - key: DATABASE_URL
         sync: false
       - key: SECRET_KEY
         sync: false
       - key: BACKEND_CORS_ORIGINS
-        value: '["http://localhost:5173", "http://127.0.0.1:5173", "https://your-frontend.vercel.app"]'
+        value: '["https://your-frontend.vercel.app"]'
       - key: BACKEND_CORS_ORIGIN_REGEX
         value: '^https://.*\\.vercel\\.app$'
       - key: LOG_LEVEL
