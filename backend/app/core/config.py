@@ -52,10 +52,14 @@ class Settings(BaseSettings):
 
         if normalized.startswith("sqlite:///") or normalized.startswith("sqlite+pysqlite:///"):
             return normalized
+        if normalized.startswith("postgresql+psycopg://"):
+            return normalized
         if normalized.startswith("postgresql+psycopg2://"):
-            return normalized
+            return normalized.replace("postgresql+psycopg2://", "postgresql+psycopg://", 1)
         if normalized.startswith("postgresql://"):
-            return normalized
+            return normalized.replace("postgresql://", "postgresql+psycopg://", 1)
+        if normalized.startswith("postgres://"):
+            return normalized.replace("postgres://", "postgresql+psycopg://", 1)
         return normalized
 
     @field_validator("BACKEND_CORS_ORIGINS", mode="before")
