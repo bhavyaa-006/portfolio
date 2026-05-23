@@ -17,7 +17,10 @@ class Settings(BaseSettings):
     DB_POOL_RECYCLE: int = Field(default=300)
 
     # CORS
-    BACKEND_CORS_ORIGINS: list[str] = Field(default_factory=lambda: ["http://localhost:5173"])
+    BACKEND_CORS_ORIGINS: list[str] = Field(
+        default_factory=lambda: ["http://localhost:5173", "http://127.0.0.1:5173"]
+    )
+    BACKEND_CORS_ORIGIN_REGEX: str = Field(default=r"^https://.*\.vercel\.app$")
 
     LOG_LEVEL: str = Field(default="INFO")
     RUN_MIGRATIONS: bool = Field(default=True)
@@ -53,7 +56,7 @@ class Settings(BaseSettings):
     @classmethod
     def parse_backend_cors_origins(cls, value):
         if value in (None, ""):
-            return ["http://localhost:5173"]
+            return ["http://localhost:5173", "http://127.0.0.1:5173"]
         if isinstance(value, str):
             text = value.strip()
             if text.startswith("["):
