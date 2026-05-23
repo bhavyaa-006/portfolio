@@ -2,12 +2,17 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1 \
+	PYTHONUNBUFFERED=1 \
+	PORT=8000
 
-COPY requirements.txt .
+COPY requirements.txt ./requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY . .
+COPY alembic.ini ./alembic.ini
+COPY alembic ./alembic
+COPY app ./app
+RUN mkdir -p /app/uploads
 
 EXPOSE 8000
 

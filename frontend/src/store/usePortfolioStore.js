@@ -7,7 +7,7 @@ const usePortfolioStore = create((set) => ({
   skills: [],
   experience: [],
   education: [],
-  loading: false,
+  loading: true,
   error: null,
 
   fetchPublicData: async () => {

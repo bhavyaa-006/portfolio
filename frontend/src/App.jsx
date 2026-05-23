@@ -1,4 +1,4 @@
-import { Routes, Route } from 'react-router-dom';
+import { Navigate, Routes, Route } from 'react-router-dom';
 import PublicLayout from './components/layout/PublicLayout';
 import AdminLayout from './components/layout/AdminLayout';
 
@@ -19,6 +19,7 @@ function App() {
         <Route index element={<Dashboard />} />
       </Route>
       <Route path="/login" element={<Login />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 }

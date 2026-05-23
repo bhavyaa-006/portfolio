@@ -1,11 +1,20 @@
 import { motion } from 'framer-motion';
 import { Download, Github, Linkedin, Mail } from 'lucide-react';
 import usePortfolioStore from '../../store/usePortfolioStore';
+import AvatarRotator from './AvatarRotator';
+
+const defaultSettings = {
+  owner_name: 'Your Name',
+  title: 'Software Engineer',
+  bio: 'Building beautiful, scalable, and high-performance applications.',
+  profile_picture_url: '',
+  resume_url: '',
+  contact_email: '',
+};
 
 export default function Hero() {
   const { settings } = usePortfolioStore();
-
-  if (!settings) return null;
+  const portfolioSettings = settings || defaultSettings;
 
   return (
     <section className="relative min-h-[90vh] flex items-center justify-center overflow-hidden">
@@ -17,18 +26,10 @@ export default function Hero() {
 
       <div className="container px-4 mx-auto relative z-10">
         <div className="flex flex-col items-center text-center space-y-8">
-          <motion.div
-            initial={{ scale: 0.8, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ duration: 0.5 }}
-            className="w-32 h-32 md:w-40 md:h-40 rounded-full overflow-hidden border-4 border-background shadow-2xl relative"
-          >
-            <img
-              src={settings.profile_picture_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=800&q=80'}
-              alt={settings.owner_name}
-              className="w-full h-full object-cover"
-            />
-          </motion.div>
+          <AvatarRotator
+            name={portfolioSettings.owner_name}
+            src={portfolioSettings.profile_picture_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=800&q=80'}
+          />
 
           <motion.div
             initial={{ y: 20, opacity: 0 }}
@@ -37,13 +38,13 @@ export default function Hero() {
             className="space-y-4 max-w-3xl"
           >
             <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold tracking-tight text-foreground">
-              Hi, I'm <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-accent-foreground">{settings.owner_name}</span>
+              Hi, I'm <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-accent-foreground">{portfolioSettings.owner_name}</span>
             </h1>
             <h2 className="text-xl md:text-3xl font-medium text-muted-foreground">
-              {settings.title || 'Software Engineer'}
+              {portfolioSettings.title || 'Software Engineer'}
             </h2>
             <p className="text-lg md:text-xl text-muted-foreground/80 leading-relaxed max-w-2xl mx-auto">
-              {settings.bio || 'Building beautiful, scalable, and high-performance applications.'}
+              {portfolioSettings.bio || 'Building beautiful, scalable, and high-performance applications.'}
             </p>
           </motion.div>
 
@@ -53,9 +54,9 @@ export default function Hero() {
             transition={{ delay: 0.4, duration: 0.5 }}
             className="flex flex-wrap items-center justify-center gap-4 pt-4"
           >
-            {settings.resume_url && (
+            {portfolioSettings.resume_url && (
               <a
-                href={settings.resume_url}
+                href={portfolioSettings.resume_url}
                 target="_blank"
                 rel="noreferrer"
                 className="flex items-center gap-2 px-6 py-3 bg-primary text-primary-foreground rounded-full font-medium hover:opacity-90 transition-all hover:scale-105"
@@ -80,8 +81,8 @@ export default function Hero() {
           >
             <a href="#" className="hover:text-foreground transition-colors"><Github size={24} /></a>
             <a href="#" className="hover:text-foreground transition-colors"><Linkedin size={24} /></a>
-            {settings.contact_email && (
-              <a href={`mailto:${settings.contact_email}`} className="hover:text-foreground transition-colors">
+            {portfolioSettings.contact_email && (
+              <a href={`mailto:${portfolioSettings.contact_email}`} className="hover:text-foreground transition-colors">
                 <Mail size={24} />
               </a>
             )}

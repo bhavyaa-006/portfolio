@@ -1,7 +1,13 @@
 import axios from 'axios';
 
+const explicitApiUrl = (import.meta.env.VITE_API_URL || '').trim();
+const isBrowser = typeof window !== 'undefined';
+const isLocalHost = isBrowser && ['localhost', '127.0.0.1'].includes(window.location.hostname);
+
+const baseURL = explicitApiUrl || (isLocalHost ? '/api/v1' : '/api/v1');
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || '/api/v1',
+  baseURL,
   timeout: 15000,
   headers: {
     'Content-Type': 'application/json',

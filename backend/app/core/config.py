@@ -1,4 +1,5 @@
 import json
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -10,19 +11,43 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7  # 7 days
 
     # Database
-    DATABASE_URL: str = Field(default="sqlite:///./portfolio.db")
+    DATABASE_URL: str = Field(default="postgresql://postgres:bhavya@postgres:5432/portfolio")
+    DB_POOL_SIZE: int = Field(default=5)
+    DB_MAX_OVERFLOW: int = Field(default=10)
+    DB_POOL_RECYCLE: int = Field(default=300)
 
     # CORS
     BACKEND_CORS_ORIGINS: list[str] = Field(default_factory=lambda: ["http://localhost:5173"])
+
+    LOG_LEVEL: str = Field(default="INFO")
+    RUN_MIGRATIONS: bool = Field(default=True)
 
     model_config = SettingsConfigDict(case_sensitive=True, env_file=".env", extra="ignore")
 
     @field_validator("DATABASE_URL", mode="before")
     @classmethod
     def normalize_database_url(cls, value: str) -> str:
-        if isinstance(value, str) and value.startswith("postgres://"):
-            return value.replace("postgres://", "postgresql+psycopg2://", 1)
-        return value
+        if not isinstance(value, str):
+            return value
+
+        normalized = value.strip()
+        if normalized.startswith("postgres://"):
+            normalized = normalized.replace("postgres://", "postgresql://", 1)
+
+        parsed = urlsplit(normalized)
+        hostname = parsed.hostname or ""
+        if hostname.endswith("neon.tech"):
+            query = dict(parse_qsl(parsed.query, keep_blank_values=True))
+            query.setdefault("sslmode", "require")
+            normalized = urlunsplit(
+                (parsed.scheme, parsed.netloc, parsed.path, urlencode(query), parsed.fragment)
+            )
+
+        if normalized.startswith("postgresql+psycopg2://"):
+            return normalized
+        if normalized.startswith("postgresql://"):
+            return normalized
+        return normalized
 
     @field_validator("BACKEND_CORS_ORIGINS", mode="before")
     @classmethod
