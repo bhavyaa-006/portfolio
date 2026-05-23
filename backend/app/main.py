@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+import asyncio
 import logging
-import time
+import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -10,9 +11,11 @@ from alembic.config import Config
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from sqlalchemy import text
+from sqlalchemy.engine import make_url
 
 from app.core.config import settings
-from app.database.session import SessionLocal
+from app.database.session import SessionLocal, engine
 from app.middleware.error_handlers import register_error_handlers
 from app.routes.auth import router as auth_router
 from app.routes.health import router as health_router
@@ -23,6 +26,27 @@ BASE_DIR = Path(__file__).resolve().parents[1]
 UPLOAD_DIR = BASE_DIR / "uploads"
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 logger = logging.getLogger(__name__)
+
+
+def _redacted_database_url() -> str:
+    try:
+        return make_url(settings.DATABASE_URL).render_as_string(hide_password=True)
+    except Exception:
+        return "<invalid database url>"
+
+
+def _configure_logging() -> None:
+    log_level = getattr(logging, settings.LOG_LEVEL.upper(), logging.INFO)
+    logging.basicConfig(
+        level=log_level,
+        format="%(asctime)s %(levelname)s [%(name)s] %(message)s",
+        force=True,
+    )
+
+
+def _check_database_connection() -> None:
+    with engine.connect() as connection:
+        connection.execute(text("SELECT 1"))
 
 
 def run_migrations() -> None:
@@ -37,30 +61,35 @@ def bootstrap_admin() -> None:
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
-    logging.basicConfig(
-        level=settings.LOG_LEVEL,
-        format="%(asctime)s %(levelname)s [%(name)s] %(message)s",
-    )
-    logger.info("Starting %s on %s", settings.PROJECT_NAME, settings.API_V1_STR)
+    logger.info("Application startup beginning")
+    logger.info("Project: %s", settings.PROJECT_NAME)
+    logger.info("API prefix: %s", settings.API_V1_STR)
+    logger.info("Database URL: %s", _redacted_database_url())
+    logger.info("Migrations enabled: %s", settings.RUN_MIGRATIONS)
 
     if settings.RUN_MIGRATIONS:
-        last_error: Exception | None = None
         for attempt in range(5):
             try:
-                run_migrations()
+                _check_database_connection()
+                await asyncio.to_thread(run_migrations)
                 logger.info("Database migrations completed")
-                last_error = None
                 break
-            except Exception as exc:  # pragma: no cover - startup retry path
-                last_error = exc
+            except Exception:
+                logger.exception("Startup migration attempt %s of 5 failed", attempt + 1)
                 if attempt == 4:
-                    raise
-                time.sleep(2)
-        if last_error is not None:
-            raise last_error
+                    logger.warning("Continuing startup without completed migrations")
+                    break
+                await asyncio.sleep(2)
 
-    bootstrap_admin()
+    try:
+        await asyncio.to_thread(bootstrap_admin)
+        logger.info("Admin bootstrap check completed")
+    except Exception:
+        logger.exception("Admin bootstrap failed during startup")
+
+    logger.info("Application startup finished")
     yield
+    logger.info("Application shutdown beginning")
 
 
 app = FastAPI(title=settings.PROJECT_NAME, openapi_url=f"{settings.API_V1_STR}/openapi.json", lifespan=lifespan)
@@ -81,3 +110,17 @@ app.include_router(health_router)
 app.include_router(auth_router, prefix=settings.API_V1_STR)
 app.include_router(portfolio_router, prefix=settings.API_V1_STR)
 app.include_router(admin_router, prefix=settings.API_V1_STR)
+
+
+def run() -> None:
+    _configure_logging()
+    port = int(os.environ.get("PORT", 8000))
+    logger.info("Starting server on 0.0.0.0:%s", port)
+    logger.info("Render health check path: /health")
+    import uvicorn
+
+    uvicorn.run(app, host="0.0.0.0", port=port, log_level=settings.LOG_LEVEL.lower())
+
+
+if __name__ == "__main__":
+    run()
