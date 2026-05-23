@@ -1,10 +1,13 @@
-from app.schemas.user import User, UserCreate, UserUpdate
-from app.schemas.token import Token, TokenPayload
+from app.schemas.auth import LoginRequest, RefreshRequest, TokenPair, UserCreate, UserRead
 from app.schemas.portfolio import (
-    PortfolioSettings, PortfolioSettingsCreate, PortfolioSettingsUpdate,
-    Project, ProjectCreate, ProjectUpdate,
-    Skill, SkillCreate, SkillUpdate,
-    Experience, ExperienceCreate, ExperienceUpdate,
-    Education, EducationCreate, EducationUpdate,
-    ContactMessage, ContactMessageCreate, ContactMessageUpdate
+    PortfolioEducationCreate,
+    PortfolioEducationRead,
+    PortfolioExperienceCreate,
+    PortfolioExperienceRead,
+    PortfolioProjectCreate,
+    PortfolioProjectRead,
+    PortfolioSettingsRead,
+    PortfolioSettingsUpdate,
+    PortfolioSkillCreate,
+    PortfolioSkillRead,
 )

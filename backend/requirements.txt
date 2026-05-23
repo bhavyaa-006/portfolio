@@ -1,6 +1,6 @@
 alembic==1.13.3
-fastapi==0.115.5
 email-validator==2.2.0
+fastapi==0.115.5
 passlib[bcrypt]==1.7.4
 psycopg[binary]==3.2.3
 pydantic[email]==2.10.1

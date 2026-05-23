@@ -1,45 +1,37 @@
+from __future__ import annotations
+
 import logging
-import subprocess
-import sys
 import time
 from contextlib import asynccontextmanager
 from pathlib import Path
 
+from alembic import command
+from alembic.config import Config
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy import text
-from sqlalchemy.exc import OperationalError
+from fastapi.staticfiles import StaticFiles
 
 from app.core.config import settings
-from app.db.session import engine
+from app.database.session import SessionLocal
+from app.middleware.error_handlers import register_error_handlers
+from app.routes.auth import router as auth_router
+from app.routes.health import router as health_router
+from app.routes.portfolio import admin_router, router as portfolio_router
+from app.services.auth_service import bootstrap_admin_user
 
-# Create tables for dev (Alembic should be used in prod)
-# Base.metadata.create_all(bind=engine)
-
-logger = logging.getLogger(__name__)
-UPLOAD_DIR = Path(__file__).resolve().parents[1] / "uploads"
+BASE_DIR = Path(__file__).resolve().parents[1]
+UPLOAD_DIR = BASE_DIR / "uploads"
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 
-def wait_for_database(timeout_seconds: int = 90, interval_seconds: int = 2) -> None:
-    deadline = time.monotonic() + timeout_seconds
-    while True:
-        try:
-            with engine.connect() as connection:
-                connection.execute(text("SELECT 1"))
-            logger.info("Database connection established")
-            return
-        except OperationalError as exc:
-            if time.monotonic() >= deadline:
-                logger.exception("Database did not become ready in time")
-                raise
-            logger.info("Waiting for database: %s", exc)
-            time.sleep(interval_seconds)
-
-
 def run_migrations() -> None:
-    logger.info("Running Alembic migrations")
-    subprocess.run([sys.executable, "-m", "alembic", "upgrade", "head"], check=True)
+    alembic_config = Config(str(BASE_DIR / "alembic.ini"))
+    command.upgrade(alembic_config, "head")
+
+
+def bootstrap_admin() -> None:
+    with SessionLocal() as session:
+        bootstrap_admin_user(session)
 
 
 @asynccontextmanager
@@ -48,43 +40,41 @@ async def lifespan(_: FastAPI):
         level=settings.LOG_LEVEL,
         format="%(asctime)s %(levelname)s [%(name)s] %(message)s",
     )
-    logger.info("Backend startup initiated")
-    wait_for_database()
+
     if settings.RUN_MIGRATIONS:
-        run_migrations()
-    else:
-        logger.info("Skipping Alembic migrations (RUN_MIGRATIONS=false)")
+        last_error: Exception | None = None
+        for attempt in range(5):
+            try:
+                run_migrations()
+                last_error = None
+                break
+            except Exception as exc:  # pragma: no cover - startup retry path
+                last_error = exc
+                if attempt == 4:
+                    raise
+                time.sleep(2)
+        if last_error is not None:
+            raise last_error
+
+    bootstrap_admin()
     yield
 
-app = FastAPI(
-    title=settings.PROJECT_NAME,
-    openapi_url=f"{settings.API_V1_STR}/openapi.json",
-    lifespan=lifespan,
+
+app = FastAPI(title=settings.PROJECT_NAME, openapi_url=f"{settings.API_V1_STR}/openapi.json", lifespan=lifespan)
+register_error_handlers(app)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.BACKEND_CORS_ORIGINS,
+    allow_origin_regex=settings.BACKEND_CORS_ORIGIN_REGEX,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
-from app.api.api import api_router
-
-# Set all CORS enabled origins
-if settings.BACKEND_CORS_ORIGINS:
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=settings.BACKEND_CORS_ORIGINS,
-        allow_origin_regex=settings.BACKEND_CORS_ORIGIN_REGEX,
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
-    )
-
-from fastapi.staticfiles import StaticFiles
-
-app.include_router(api_router, prefix=settings.API_V1_STR)
 app.mount("/uploads", StaticFiles(directory=str(UPLOAD_DIR)), name="uploads")
 
-@app.get("/")
-def root():
-    return {"message": "Welcome to the Portfolio API"}
-
-
-@app.get("/health")
-def health_check():
-    return {"status": "ok"}
+app.include_router(health_router)
+app.include_router(auth_router, prefix=settings.API_V1_STR)
+app.include_router(portfolio_router, prefix=settings.API_V1_STR)
+app.include_router(admin_router, prefix=settings.API_V1_STR)

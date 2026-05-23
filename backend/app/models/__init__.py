@@ -1,10 +1,8 @@
-from app.db.base import Base
-from app.models.user import User
 from app.models.portfolio import (
+    PortfolioEducation,
+    PortfolioExperience,
+    PortfolioProject,
     PortfolioSettings,
-    Project,
-    Skill,
-    Experience,
-    Education,
-    ContactMessage
+    PortfolioSkill,
 )
+from app.models.user import User
